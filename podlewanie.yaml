@@ -1,0 +1,1071 @@
+esphome:
+  name: podlewanie
+  platform: ESP32
+  board: esp-wrover-kit
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  reboot_timeout: 30min
+
+  manual_ip:
+    static_ip: 192.168.0.13
+    gateway: 192.168.0.1
+    subnet: 255.255.255.0
+    dns1: 192.168.0.1
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Podlewanie Fallback Hotspot"
+    password: !secret captive_portal_password
+
+captive_portal:
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  reboot_timeout: 30min
+
+ota:
+
+web_server:
+  port: 80
+
+i2c:
+
+mcp23017:
+  id: 'expander'
+  address: 0x20
+
+deep_sleep:
+  id: no_watering
+  wakeup_pin: GPIO04
+
+sun:
+  latitude: 52.437566716212636°
+  longitude: 17.75666849850009°
+
+
+time:
+  - platform: sntp
+    timezone: Europe/Warsaw
+    on_time_sync:
+      then:
+        - logger.log: "Synchronized system clock"
+        - output.turn_on: Valve_1_o_l
+        - output.turn_on: Valve_2_o_l
+        - output.turn_on: Valve_3_o_l
+        - output.turn_on: Valve_4_o_l
+        - output.turn_on: Valve_5_o_l
+        - delay: 150ms
+        - output.turn_off: Valve_1_o_l
+        - output.turn_off: Valve_2_o_l
+        - output.turn_off: Valve_3_o_l
+        - output.turn_off: Valve_4_o_l
+        - output.turn_off: Valve_5_o_l
+    on_time:
+      - seconds: 0
+        minutes: 0
+        hours: 1
+        months: 1,2,3,10,11,12
+        then: 
+        #1st valve lock
+          - if: 
+              condition:
+                switch.is_on: Valve_1_s
+              then:
+                - switch.turn_off: Valve_1_s
+                - delay: 2s
+          - if:
+              condition: 
+                binary_sensor.is_off: Valve_1_fl
+              then:
+               - binary_sensor.template.publish:
+                  id: Valve_1_fl
+                  state: ON
+        #2nd valve lock
+          - if: 
+              condition:
+                switch.is_on: Valve_2_s
+              then:
+                - switch.turn_off: Valve_2_s
+                - delay: 2s
+          - if:
+              condition: 
+                binary_sensor.is_off: Valve_2_fl
+              then:
+               - binary_sensor.template.publish:
+                  id: Valve_2_fl
+                  state: ON
+        #3rd valve lock
+          - if: 
+              condition:
+                switch.is_on: Valve_3_s
+              then:
+                - switch.turn_off: Valve_3_s
+                - delay: 2s
+          - if:
+              condition: 
+                binary_sensor.is_off: Valve_3_fl
+              then:
+               - binary_sensor.template.publish:
+                  id: Valve_3_fl
+                  state: ON
+        #4th valve lock
+          - if: 
+              condition:
+                switch.is_on: Valve_4_s
+              then:
+                - switch.turn_off: Valve_4_s
+                - delay: 2s
+          - if:
+              condition: 
+                binary_sensor.is_off: Valve_4_fl
+              then:
+               - binary_sensor.template.publish:
+                  id: Valve_4_fl
+                  state: ON
+        #Deep sleep
+          - delay: 120s
+          - deep_sleep.enter:
+              id: no_watering
+              sleep_duration: 23h
+
+
+dallas:
+  - pin: GPIO02
+    update_interval: 900s
+
+script:
+  #Gate 1 light turn off script
+    - id: Gate_1
+      then: 
+        - if:
+            condition:
+              light.is_off: Light_1 
+            then:
+              light.turn_on: Light_1
+        - delay: 90s
+        - light.turn_off: Light_1
+
+  #Gate 2 light turn off scirpt 
+    - id: Gate_2
+      then: 
+        - if:
+            condition:
+              light.is_off: Light_2
+            then:
+              light.turn_on: Light_2
+        - delay: 90s
+        - light.turn_off: Light_2
+
+  #Valve 1 auto close
+    - id: Valve_1
+      then:
+        - output.turn_on: Valve_1_o
+        - delay: 11s
+        - if:
+            condition:
+              binary_sensor.is_off: Valve_1_ol
+            then:
+              - while:
+                  condition: 
+                    sensor.in_range:
+                      id: W_G_1
+                      below: 0.5
+                  then:
+                   - output.turn_on: Valve_1_o
+                   - delay: 900s
+                   - output.turn_off: Valve_1_o
+                   - delay: 950s
+                   
+              - switch.turn_on: Valve_1_b
+              - switch.turn_off: Valve_1_s
+            else:
+             - output.turn_on: Valve_1_o
+
+  #Valve 2 auto close
+    - id: Valve_2
+      then:
+        - output.turn_on: Valve_2_o
+        - delay: 11s
+        - if:
+            condition:
+              binary_sensor.is_off: Valve_2_ol
+            then:
+              - while:
+                  condition: 
+                    sensor.in_range:
+                      id: W_G_1
+                      below: 0.5
+                  then:
+                   - output.turn_on: Valve_2_o
+                   - delay: 900s
+                   - output.turn_off: Valve_2_o
+                   - delay: 950s
+                   
+              - switch.turn_on: Valve_2_b
+              - switch.turn_off: Valve_2_s
+            else:
+             - output.turn_on: Valve_2_o
+
+  #Valve 3 auto close
+    - id: Valve_3
+      then:
+        - output.turn_on: Valve_3_o
+        - delay: 11s
+        - if:
+            condition:
+              binary_sensor.is_off: Valve_3_ol
+            then:
+              - while:
+                  condition: 
+                    sensor.in_range:
+                      id: W_G_1
+                      below: 0.5
+                  then:
+                   - output.turn_on: Valve_3_o
+                   - delay: 900s
+                   - output.turn_off: Valve_3_o
+                   - delay: 950s
+                   
+              - switch.turn_on: Valve_3_b
+              - switch.turn_off: Valve_3_s
+            else:
+             - output.turn_on: Valve_3_o
+
+  #Valve 4 auto close
+    - id: Valve_4
+      then:
+        - output.turn_on: Valve_4_o
+        - delay: 11s
+        - if:
+            condition:
+              binary_sensor.is_off: Valve_4_ol
+            then:
+              - while:
+                  condition: 
+                    sensor.in_range:
+                      id: W_G_1
+                      below: 0.5
+                  then:
+                   - output.turn_on: Valve_4_o
+                   - delay: 900s
+                   - output.turn_off: Valve_4_o
+                   - delay: 950s
+                   
+              - switch.turn_on: Valve_4_b
+              - switch.turn_off: Valve_4_s
+            else:
+             - output.turn_on: Valve_4_o
+
+sensor:
+
+  - platform: sun
+    id: azimuth
+    type: azimuth
+
+  - platform: sun
+    id: elevation
+    type: elevation
+    on_value_range:
+      above: -18
+      below: 4
+      then: 
+          if:
+            condition:
+              not:
+                api.connected:
+            then: 
+              if: 
+                condition: 
+                  sensor.in_range:
+                    id: azimuth
+                    above: 0
+                    below: 100
+                then:
+                  - if: 
+                      condition: 
+                        switch.is_off: Valve_1_s
+                      then:
+                        switch.turn_on: Valve_1_s
+                  - if: 
+                      condition: 
+                        switch.is_off: Valve_2_s
+                      then:
+                        switch.turn_on: Valve_2_s
+                  - if: 
+                      condition: 
+                        switch.is_off: Valve_3_s
+                      then:
+                        switch.turn_on: Valve_3_s
+                  - if: 
+                      condition: 
+                        switch.is_off: Valve_4_s
+                      then:
+                        switch.turn_on: Valve_4_s
+
+  - platform: adc
+    pin: GPIO32
+    name: "Wilgotność Gleby"
+    id: W_G_1
+    update_interval: 300s
+
+  - platform: dallas
+    address: 0x1c0000031edd2a28
+    name: "Na płytce"
+
+  - platform: dallas
+    address: 0x1c0000031edd2a28
+    name: "Dwór"
+  
+  - platform: dallas
+    address: 0x1c0000031edd2a28
+    name: "Woda"
+
+light:
+  #Light garage 
+    - platform: binary
+      name: "Światło garaż"
+      output: Light_1_o
+      id: Light_1
+
+  #Light shed 
+    - platform: binary
+      name: "Światło wiata"
+      output: Light_2_o
+      id: Light_2
+
+output:
+  #1st light GPIO 
+    - platform: gpio
+      pin: 
+        mcp23xxx: "expander"
+        number: 0
+        mode: output
+        inverted: False
+      id: Light_1_o
+
+  #2nd light GPIO 
+    - platform: gpio
+      pin: 
+        mcp23xxx: "expander"
+        number: 1
+        mode: output
+        inverted: False
+      id: Light_2_o
+
+  #Valves!!!
+
+  #1st valve GPIO   
+    - platform: gpio
+      pin: GPIO23
+      id: Valve_1_o
+
+  #2nd valve GPIO 
+    - platform: gpio
+      pin: GPIO19
+      id: Valve_2_o
+
+  #3rd valve GPIO 
+    - platform: gpio
+      pin: GPIO18
+      id: Valve_3_o
+
+  #4th valve GPIO 
+    - platform: gpio
+      pin: GPIO5
+      id: Valve_4_o
+
+  #5th valve GPIO 
+    - platform: gpio
+      pin: GPIO17
+      id: Valve_5_o
+
+  #VALVES LOCK STATES
+    
+  #1st valve lock state GPIO 
+    - platform: gpio
+      pin: GPIO16
+      id: Valve_1_o_l
+
+  #2nd valve lock state GPIO 
+    - platform: gpio
+      pin: 
+        mcp23xxx: "expander"
+        number: 2
+        mode: output
+        inverted: False
+      id: Valve_2_o_l
+
+  #3rd valve lock state GPIO 
+    - platform: gpio
+      pin: 
+        mcp23xxx: "expander"
+        number: 3
+        mode: output
+        inverted: False
+      id: Valve_3_o_l
+
+  #4th valve lock state GPIO 
+    - platform: gpio
+      pin: 
+        mcp23xxx: "expander"
+        number: 4
+        mode: output
+        inverted: False
+      id: Valve_4_o_l
+
+  #5th valve lock state GPIO 
+    - platform: gpio
+      pin: 
+        mcp23xxx: "expander"
+        number: 5
+        mode: output
+        inverted: False
+      id: Valve_5_o_l
+
+switch:
+  #Compressor switch
+    - platform: gpio
+      name: "Kompresor"
+      id: Kompresor
+      pin: 
+        mcp23xxx: "expander"
+        number: 6
+        mode: output
+        inverted: False
+  
+  #1st valve switch
+    - platform: template
+      name: "Podlewanie strefa 1"
+      id: Valve_1_s
+      icon: mdi:sprinkler
+      turn_on_action:
+        if:
+          condition: 
+            binary_sensor.is_off: Valve_1_fl
+          then:
+           - delay: 1s
+           - script.execute: Valve_1
+          else:
+           - switch.turn_on: Valve_1_b
+           - switch.turn_off: Valve_1_s
+      turn_off_action: 
+        if:
+          condition:
+            switch.is_off: Valve_1_b
+          then:
+           - if:
+              condition:
+                script.is_running: Valve_1
+              then:
+                script.stop: Valve_1
+           - if:
+              condition:
+                binary_sensor.is_on: Valve_1_ol
+              then:
+                binary_sensor.template.publish:
+                  id: Valve_1_ol
+                  state: OFF
+           - delay: 1s
+           - output.turn_off: Valve_1_o          
+          else:
+           switch.turn_off: Valve_1_b
+  #1st valve buffer
+    - platform: template
+      id: Valve_1_b
+  
+  #2nd valve switch
+    - platform: template
+      name: "Podlewanie strefa 2"
+      id: Valve_2_s
+      icon: mdi:sprinkler
+      turn_on_action:
+        if:
+          condition: 
+            binary_sensor.is_off: Valve_2_fl
+          then:
+           - delay: 1s
+           - script.execute: Valve_2
+          else:
+           - switch.turn_on: Valve_2_b
+           - switch.turn_off: Valve_2_s
+      turn_off_action: 
+        if:
+          condition:
+            switch.is_off: Valve_2_b
+          then:
+           - if:
+              condition:
+                script.is_running: Valve_2
+              then:
+                script.stop: Valve_2
+           - if:
+              condition:
+                binary_sensor.is_on: Valve_2_ol
+              then:
+                binary_sensor.template.publish:
+                  id: Valve_2_ol
+                  state: OFF
+           - delay: 1s
+           - output.turn_off: Valve_2_o
+          else:
+           switch.turn_off: Valve_2_b
+  #2nd valve buffer
+    - platform: template
+      id: Valve_2_b
+  
+  #3rd valve switch
+    - platform: template
+      name: "Podlewanie strefa 3"
+      id: Valve_3_s
+      icon: mdi:sprinkler
+      turn_on_action:
+        if:
+          condition: 
+            binary_sensor.is_off: Valve_3_fl
+          then:
+           - delay: 1s
+           - script.execute: Valve_3
+          else:
+           - switch.turn_on: Valve_3_b
+           - switch.turn_off: Valve_3_s
+      turn_off_action: 
+        if:
+          condition:
+            switch.is_off: Valve_3_b
+          then:
+           - if:
+              condition:
+                script.is_running: Valve_3
+              then:
+                script.stop: Valve_3
+           - if:
+              condition:
+                binary_sensor.is_on: Valve_3_ol
+              then:
+                binary_sensor.template.publish:
+                  id: Valve_3_ol
+                  state: OFF
+           - delay: 1s
+           - output.turn_off: Valve_3_o
+          else:
+           switch.turn_off: Valve_3_b
+  #3rd valve buffer
+    - platform: template
+      id: Valve_3_b
+  
+  #4th valve switch
+    - platform: template
+      name: "Podlewanie strefa 4"
+      id: Valve_4_s
+      icon: mdi:sprinkler
+      turn_on_action:
+        if:
+          condition: 
+            binary_sensor.is_off: Valve_4_fl
+          then:
+           - delay: 1s
+           - script.execute: Valve_4
+          else:
+           - switch.turn_on: Valve_4_b
+           - switch.turn_off: Valve_4_s
+      turn_off_action: 
+        if:
+          condition:
+            switch.is_off: Valve_4_b
+          then:
+           - if:
+              condition:
+                script.is_running: Valve_4
+              then:
+                script.stop: Valve_4
+           - if:
+              condition:
+                binary_sensor.is_on: Valve_4_ol
+              then:
+                binary_sensor.template.publish:
+                  id: Valve_4_ol
+                  state: OFF
+           - delay: 1s
+           - output.turn_off: Valve_4_o
+          else:
+           switch.turn_off: Valve_4_b
+  #4th valve buffer
+    - platform: template
+      id: Valve_4_b
+  
+  #5th valve switch
+    - platform: template
+      name: "Zawór wody"
+      id: Valve_5_s
+      icon: mdi:water-pump
+      turn_on_action:
+        if:
+          condition: 
+            binary_sensor.is_off: Valve_5_fl
+          then:
+            if:
+              condition: 
+                switch.is_off: Valve_5_b
+              then:
+                - delay: 1s
+                - output.turn_on: Valve_5_o
+              else:
+                switch.turn_off: Valve_5_b
+          else:
+            - switch.turn_on: Valve_5_b
+            - switch.turn_off: Valve_5_s
+      turn_off_action: 
+        if:
+          condition: 
+            binary_sensor.is_off: Valve_5_ol
+          then:
+            if:
+              condition:
+                switch.is_off: Valve_5_b
+              then:
+                - delay: 1s
+                - output.turn_off: Valve_5_o
+              else:
+                switch.turn_off: Valve_5_b
+          else:
+           - switch.turn_on: Valve_5_b
+           - switch.turn_on: Valve_5_s
+  #5th valve buffer
+    - platform: template
+      id: Valve_5_b
+
+binary_sensor:
+  #1st valve button
+    - platform: gpio
+      pin: 
+        number: GPIO36
+        mode: INPUT_PULLUP
+      id: Valve_1_bs
+      filters:
+        - delayed_on: 100ms
+      on_press:
+        switch.toggle: Valve_1_s
+      on_click:
+        min_length: 3000ms
+        max_length: 10000ms
+        then: 
+          if: 
+            condition:
+              switch.is_on: Valve_1_s
+            then:
+             - binary_sensor.template.publish:
+                id: Valve_1_fl
+                state: OFF
+             - if:
+                condition: 
+                  binary_sensor.is_on: Valve_1_ol
+                then:
+                 - binary_sensor.template.publish:
+                    id: Valve_1_ol
+                    state: OFF
+                else:
+                 - binary_sensor.template.publish:
+                    id: Valve_1_ol
+                    state: ON 
+            else:
+             - binary_sensor.template.publish:
+                id: Valve_1_ol
+                state: OFF
+             - if:
+                condition: 
+                  binary_sensor.is_on: Valve_1_fl
+                then:
+                 - binary_sensor.template.publish:
+                    id: Valve_1_fl
+                    state: OFF
+                else:
+                 - binary_sensor.template.publish:
+                    id: Valve_1_fl
+                    state: ON 
+  
+  #1st valve on lock
+    - platform: template
+      id: Valve_1_ol
+      name: "Blokada wyłączania podlewania - strefa 1"
+      device_class: lock
+      on_press: 
+        output.turn_on: Valve_1_o_l
+      on_release:
+        output.turn_off: Valve_1_o_l
+  #1st valve off lock
+    - platform: template
+      id: Valve_1_fl
+      name: "Blokada włączania podlewania - strefa 1"
+      device_class: lock
+      on_press: 
+        output.turn_on: Valve_1_o_l
+      on_release:
+        output.turn_off: Valve_1_o_l
+  
+  #2nd valve button
+    - platform: gpio
+      pin: 
+        number: GPIO39
+        mode: INPUT_PULLUP
+      id: Valve_2_bs
+      filters:
+        - delayed_on: 100ms
+      on_press:
+        switch.toggle: Valve_2_s
+      on_click:
+        min_length: 3000ms
+        max_length: 10000ms
+        then: 
+          if: 
+            condition:
+              switch.is_on: Valve_2_s
+            then:
+             - binary_sensor.template.publish:
+                id: Valve_1_fl
+                state: OFF
+             - if:
+                condition: 
+                  binary_sensor.is_on: Valve_2_ol
+                then:
+                 - binary_sensor.template.publish:
+                    id: Valve_2_ol
+                    state: OFF
+                else:
+                 - binary_sensor.template.publish:
+                    id: Valve_2_ol
+                    state: ON 
+            else:
+             - binary_sensor.template.publish:
+                id: Valve_2_ol
+                state: OFF
+             - if:
+                condition: 
+                  binary_sensor.is_on: Valve_2_fl
+                then:
+                 - binary_sensor.template.publish:
+                    id: Valve_2_fl
+                    state: OFF
+                else:
+                 - binary_sensor.template.publish:
+                    id: Valve_2_fl
+                    state: ON 
+  
+  #2nd valve on lock
+    - platform: template
+      id: Valve_2_ol
+      name: "Blokada wyłączania podlewania - strefa 2"
+      device_class: lock
+      on_press: 
+        output.turn_on: Valve_2_o_l
+      on_release:
+        output.turn_off: Valve_2_o_l
+  #2nd valve off lock
+    - platform: template
+      id: Valve_2_fl
+      name: "Blokada włączania podlewania - strefa 2"
+      device_class: lock
+      on_press: 
+        output.turn_on: Valve_2_o_l
+      on_release:
+        output.turn_off: Valve_2_o_l
+  
+  #3rd valve button
+    - platform: gpio
+      pin: 
+        number: GPIO34
+        mode: INPUT_PULLUP
+      id: Valve_3_bs
+      filters:
+        - delayed_on: 100ms
+      on_press:
+        switch.toggle: Valve_3_s
+      on_click:
+        min_length: 3000ms
+        max_length: 10000ms
+        then: 
+          if: 
+            condition:
+              switch.is_on: Valve_3_s
+            then:
+             - binary_sensor.template.publish:
+                id: Valve_3_fl
+                state: OFF
+             - if:
+                condition: 
+                  binary_sensor.is_on: Valve_3_ol
+                then:
+                 - binary_sensor.template.publish:
+                    id: Valve_3_ol
+                    state: OFF
+                else:
+                 - binary_sensor.template.publish:
+                    id: Valve_3_ol
+                    state: ON 
+            else:
+             - binary_sensor.template.publish:
+                id: Valve_3_ol
+                state: OFF
+             - if:
+                condition: 
+                  binary_sensor.is_on: Valve_3_fl
+                then:
+                 - binary_sensor.template.publish:
+                    id: Valve_3_fl
+                    state: OFF
+                else:
+                 - binary_sensor.template.publish:
+                    id: Valve_3_fl
+                    state: ON 
+  
+  #3rd valve on lock
+    - platform: template
+      id: Valve_3_ol
+      name: "Blokada wyłączania podlewania - strefa 3"
+      device_class: lock
+      on_press: 
+        output.turn_on: Valve_3_o_l
+      on_release:
+        output.turn_off: Valve_3_o_l
+  #3rd valve off lock
+    - platform: template
+      id: Valve_3_fl
+      name: "Blokada włączania podlewania - strefa 3"
+      device_class: lock
+      on_press: 
+        output.turn_on: Valve_3_o_l
+      on_release:
+        output.turn_off: Valve_3_o_l
+  
+  #4th valve button
+    - platform: gpio
+      pin: 
+        number: GPIO35
+        mode: INPUT_PULLUP
+      id: Valve_4_bs
+      filters:
+        - delayed_on: 100ms
+      on_press:
+        switch.toggle: Valve_4_s
+      on_click:
+        min_length: 3000ms
+        max_length: 10000ms
+        then: 
+          if: 
+            condition:
+              switch.is_on: Valve_4_s
+            then:
+             - binary_sensor.template.publish:
+                id: Valve_4_fl
+                state: OFF
+             - if:
+                condition: 
+                  binary_sensor.is_on: Valve_4_ol
+                then:
+                 - binary_sensor.template.publish:
+                    id: Valve_4_ol
+                    state: OFF
+                else:
+                 - binary_sensor.template.publish:
+                    id: Valve_4_ol
+                    state: ON 
+            else:
+             - binary_sensor.template.publish:
+                id: Valve_4_ol
+                state: OFF
+             - if:
+                condition: 
+                  binary_sensor.is_on: Valve_4_fl
+                then:
+                 - binary_sensor.template.publish:
+                    id: Valve_4_fl
+                    state: OFF
+                else:
+                 - binary_sensor.template.publish:
+                    id: Valve_4_fl
+                    state: ON 
+  
+  #4th valve on lock
+    - platform: template
+      id: Valve_4_ol
+      name: "Blokada wyłączania podlewania - strefa 4"
+      device_class: lock
+      on_press: 
+        output.turn_on: Valve_4_o_l
+      on_release:
+        output.turn_off: Valve_4_o_l
+  #4th valve off lock
+    - platform: template
+      id: Valve_4_fl
+      name: "Blokada włączania podlewania - strefa 4"
+      device_class: lock
+      on_press: 
+        output.turn_on: Valve_4_o_l
+      on_release:
+        output.turn_off: Valve_4_o_l
+  
+  #5th valve button
+    - platform: gpio
+      pin: 
+        number: GPIO00
+        mode: INPUT_PULLUP
+      id: Valve_5_bs
+      filters:
+        - delayed_on: 100ms
+      on_click:
+        min_length: 3000ms
+        max_length: 10000ms
+        then: 
+          if: 
+            condition:
+              switch.is_on: Valve_5_s
+            then:
+             - binary_sensor.template.publish:
+                id: Valve_5_fl
+                state: OFF
+             - if:
+                condition: 
+                  binary_sensor.is_on: Valve_5_ol
+                then:
+                 - binary_sensor.template.publish:
+                    id: Valve_5_ol
+                    state: OFF
+                else:
+                 - binary_sensor.template.publish:
+                    id: Valve_5_ol
+                    state: ON 
+            else:
+             - binary_sensor.template.publish:
+                id: Valve_5_ol
+                state: OFF
+             - if:
+                condition: 
+                  binary_sensor.is_on: Valve_5_fl
+                then:
+                 - binary_sensor.template.publish:
+                    id: Valve_5_fl
+                    state: OFF
+                else:
+                 - binary_sensor.template.publish:
+                    id: Valve_5_fl
+                    state: ON 
+      on_press:
+        switch.toggle: Valve_5_s
+  
+  #5th valve on lock
+    - platform: template
+      id: Valve_5_ol
+      name: "Blokada - tylko woda z domu"
+      device_class: lock
+      on_press: 
+        output.turn_on: Valve_5_o_l
+      on_release:
+        output.turn_off: Valve_5_o_l
+  #5th valve off lock
+    - platform: template
+      id: Valve_5_fl
+      name: "Blokada - tylko woda z studni"
+      device_class: lock
+      on_press: 
+        output.turn_on: Valve_5_o_l
+      on_release:
+        output.turn_off: Valve_5_o_l
+  
+  #Compressor button
+    - platform: gpio
+      pin: 
+        number: GPIO25
+        mode: INPUT_PULLUP
+      id: Kompresor_b
+      filters:
+        - delayed_on: 100ms
+      on_press:
+        switch.toggle: Kompresor
+        
+  #Fridge reed switch
+    - platform: gpio
+      pin: 
+        number: GPIO26
+        mode: INPUT_PULLUP
+      device_class: opening
+      name: "Lodówka"
+      
+  #Gate 1 reed switch
+    - platform: gpio
+      pin: 
+        number: GPIO27
+        mode: INPUT_PULLUP
+      name: "Garaż"
+      device_class: garage_door
+      on_state:
+        - if:
+            condition:
+              script.is_running: Gate_1
+            then:
+              script.stop: Gate_1
+        - script.execute: Gate_1  
+          
+  #Gate 2 reed switch
+    - platform: gpio
+      pin: 
+        number: GPIO14
+        mode: INPUT_PULLUP
+      name: "Wiata"
+      device_class: garage_door
+      on_state:
+        - if:
+            condition:
+              script.is_running: Gate_2
+            then:
+              script.stop: Gate_2
+        - script.execute: Gate_2 
+  
+  #Water state sensor
+    - platform: gpio
+      pin: 
+        number: GPIO33
+        mode: INPUT_PULLUP
+      name: "Czujnik wody w studni"
+      device_class: moisture
+      filters:
+        - delayed_on_off: 100ms
+      on_release:
+        switch.turn_off: Valve_5_s
+      on_press:
+        switch.turn_on: Valve_5_s
+  
+  #Gate light 1 switch
+    - platform: gpio
+      pin: 
+        number: GPIO12
+        mode: INPUT_PULLUP
+      id: gate_1_b
+      filters:
+        - delayed_on: 100ms
+      on_state:
+        - if:
+            condition:
+              script.is_running: Gate_1
+            then:
+              script.stop: Gate_1
+        - light.toggle: Light_1
+        
+  #Gate light 2 switch
+    - platform: gpio
+      pin: 
+        number: GPIO13
+        mode: INPUT_PULLUP
+      id: gate_2_b
+      filters:
+        - delayed_on: 100ms
+      on_press:
+        - if:
+            condition:
+              script.is_running: Gate_2
+            then:
+              script.stop: Gate_2
+        - light.toggle: Light_2
