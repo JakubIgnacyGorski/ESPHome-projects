@@ -1,0 +1,58 @@
+esphome:
+  name: jakub_amplituner
+  platform: ESP8266
+  board: esp01_1m
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Jakub Amplituner"
+    password: !secret captive_portal_password
+
+captive_portal:
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+
+ota:
+
+    
+switch:
+  - platform: gpio
+    pin:
+      number: 2
+      inverted: false
+    id: wlacznik
+  - platform: template
+    name: 'Amplituner'
+    id: buffer
+    icon: 'mdi:audio-video'
+    restore_state: off
+    optimistic: true
+    turn_on_action:
+    - switch.turn_on: wlacznik
+    - delay: 500ms
+    - switch.turn_off: wlacznik
+    turn_off_action:
+    - switch.turn_on: wlacznik
+    - delay: 500ms
+    - switch.turn_off: wlacznik
+  - platform: restart
+    name: "Amplituner Restart"
+    
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: 0
+      mode: INPUT_PULLUP
+      inverted: True
+    id: przycisk
+    on_press:
+      then:
+      - switch.toggle: buffer
