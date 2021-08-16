@@ -230,9 +230,10 @@ script:
                    - delay: 900s
                    - output.turn_off: Valve_3_o
                    - delay: 950s
-                   
-              - switch.turn_on: Valve_3_b
-              - switch.turn_off: Valve_3_s
+
+              - switch.template.publish:
+                  id: Valve_3_s
+                  state: OFF
             else:
              - output.turn_on: Valve_3_o
 
@@ -256,8 +257,9 @@ script:
                    - output.turn_off: Valve_4_o
                    - delay: 950s
                    
-              - switch.turn_on: Valve_4_b
-              - switch.turn_off: Valve_4_s
+              - switch.template.publish:
+                  id: Valve_4_s
+                  state: OFF
             else:
              - output.turn_on: Valve_4_o
 
@@ -518,33 +520,27 @@ switch:
           then:
            - delay: 1s
            - script.execute: Valve_3
-          else:
-           - switch.turn_on: Valve_3_b
-           - switch.turn_off: Valve_3_s
+           - switch.template.publish:
+               id: Valve_3_s
+               state: ON 
       turn_off_action: 
-        if:
-          condition:
-            switch.is_off: Valve_3_b
-          then:
-           - if:
-              condition:
-                script.is_running: Valve_3
-              then:
-                script.stop: Valve_3
-           - if:
-              condition:
-                binary_sensor.is_on: Valve_3_ol
-              then:
-                binary_sensor.template.publish:
-                  id: Valve_3_ol
-                  state: OFF
-           - delay: 1s
-           - output.turn_off: Valve_3_o
-          else:
-           switch.turn_off: Valve_3_b
-  #3rd valve buffer
-    - platform: template
-      id: Valve_3_b
+        - if:
+            condition:
+              script.is_running: Valve_3
+            then:
+              script.stop: Valve_3
+        - if:
+            condition:
+              binary_sensor.is_on: Valve_3_ol
+            then:
+              binary_sensor.template.publish:
+                id: Valve_3_ol
+                state: OFF
+        - delay: 1s
+        - output.turn_off: Valve_3_o
+        - switch.template.publish:
+            id: Valve_3_s
+            state: OFF 
   
   #4th valve switch
     - platform: template
@@ -558,33 +554,27 @@ switch:
           then:
            - delay: 1s
            - script.execute: Valve_4
-          else:
-           - switch.turn_on: Valve_4_b
-           - switch.turn_off: Valve_4_s
+           - switch.template.publish:
+               id: Valve_4_s
+               state: ON 
       turn_off_action: 
-        if:
-          condition:
-            switch.is_off: Valve_4_b
-          then:
-           - if:
-              condition:
-                script.is_running: Valve_4
-              then:
-                script.stop: Valve_4
-           - if:
-              condition:
-                binary_sensor.is_on: Valve_4_ol
-              then:
-                binary_sensor.template.publish:
-                  id: Valve_4_ol
-                  state: OFF
-           - delay: 1s
-           - output.turn_off: Valve_4_o
-          else:
-           switch.turn_off: Valve_4_b
-  #4th valve buffer
-    - platform: template
-      id: Valve_4_b
+        - if:
+            condition:
+              script.is_running: Valve_4
+            then:
+              script.stop: Valve_4
+        - if:
+            condition:
+              binary_sensor.is_on: Valve_4_ol
+            then:
+              binary_sensor.template.publish:
+                id: Valve_4_ol
+                state: OFF
+        - delay: 1s
+        - output.turn_off: Valve_4_o
+        - switch.template.publish:
+             id: Valve_4_s
+             state: OFF
   
   #5th valve switch
     - platform: template
@@ -596,36 +586,21 @@ switch:
           condition: 
             binary_sensor.is_off: Valve_5_fl
           then:
-            if:
-              condition: 
-                switch.is_off: Valve_5_b
-              then:
-                - delay: 1s
-                - output.turn_on: Valve_5_o
-              else:
-                switch.turn_off: Valve_5_b
-          else:
-            - switch.turn_on: Valve_5_b
-            - switch.turn_off: Valve_5_s
+            - delay: 1s
+            - output.turn_on: Valve_5_o
+            - switch.template.publish:
+                id: Valve_5_s
+                state: ON 
       turn_off_action: 
         if:
           condition: 
             binary_sensor.is_off: Valve_5_ol
           then:
-            if:
-              condition:
-                switch.is_off: Valve_5_b
-              then:
-                - delay: 1s
-                - output.turn_off: Valve_5_o
-              else:
-                switch.turn_off: Valve_5_b
-          else:
-           - switch.turn_on: Valve_5_b
-           - switch.turn_on: Valve_5_s
-  #5th valve buffer
-    - platform: template
-      id: Valve_5_b
+            - delay: 1s
+            - output.turn_off: Valve_5_o
+            - switch.template.publish:
+                id: Valve_5_s
+                state: OFF
 
 binary_sensor:
   #1st valve button
