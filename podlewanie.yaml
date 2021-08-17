@@ -39,9 +39,9 @@ mcp23017:
   id: 'expander'
   address: 0x20
 
-deep_sleep:
-  id: no_watering
-  wakeup_pin: GPIO04
+#deep_sleep:
+#  id: no_watering
+#  wakeup_pin: GPIO04
 
 sun:
   latitude: 52.437566716212636°
@@ -59,12 +59,62 @@ time:
         - output.turn_on: Valve_3_o_l
         - output.turn_on: Valve_4_o_l
         - output.turn_on: Valve_5_o_l
-        - delay: 200ms
-        - output.turn_off: Valve_1_o_l
-        - output.turn_off: Valve_2_o_l
-        - output.turn_off: Valve_3_o_l
-        - output.turn_off: Valve_4_o_l
-        - output.turn_off: Valve_5_o_l
+        - delay: 300ms
+        - if:
+            condition:
+              binary_sensor.is_off: Valve_1_ol
+            then:
+              output.turn_off: Valve_1_o_l
+            else:
+              if:
+                condition:
+                  binary_sensor.is_off: Valve_1_fl
+                then:
+                  output.turn_off: Valve_1_o_l
+        - if:
+            condition:
+              binary_sensor.is_off: Valve_2_ol
+            then:
+              output.turn_off: Valve_2_o_l
+            else:
+              if:
+                condition:
+                  binary_sensor.is_off: Valve_2_fl
+                then:
+                  output.turn_off: Valve_2_o_l
+        - if:
+            condition:
+              binary_sensor.is_off: Valve_3_ol
+            then:
+              output.turn_off: Valve_3_o_l
+            else:
+              if:
+                condition:
+                  binary_sensor.is_off: Valve_3_fl
+                then:
+                  output.turn_off: Valve_3_o_l
+        - if:
+            condition:
+              binary_sensor.is_off: Valve_4_ol
+            then:
+              output.turn_off: Valve_4_o_l
+            else:
+              if:
+                condition:
+                  binary_sensor.is_off: Valve_4_fl
+                then:
+                  output.turn_off: Valve_4_o_l
+        - if:
+            condition:
+              binary_sensor.is_off: Valve_5_ol
+            then:
+              output.turn_off: Valve_5_o_l
+            else:
+              if:
+                condition:
+                  binary_sensor.is_off: Valve_5_fl
+                then:
+                  output.turn_off: Valve_5_o_l
     on_time:
       - seconds: 0
         minutes: 0
@@ -128,10 +178,10 @@ time:
                   id: Valve_4_fl
                   state: ON
         #Deep sleep
-          - delay: 120s
-          - deep_sleep.enter:
-              id: no_watering
-              sleep_duration: 23h
+          #- delay: 120s
+          #- deep_sleep.enter:
+          #    id: no_watering
+          #    sleep_duration: 23h
 
 
 dallas:
